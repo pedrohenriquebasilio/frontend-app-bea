@@ -15,7 +15,6 @@ import {
 
 // --- CONFIGURAÇÃO DA API ---
 const API_BASE_URL = 'https://sinaurb-app-bea-backend.nu5jqr.easypanel.host'; 
-const USE_REAL_API = false; // Mude para TRUE para usar o backend real
 
 // --- SERVIÇO DE API ---
 const apiService = {
@@ -25,8 +24,6 @@ const apiService = {
    * O Backend DEVE retornar: { totalSpent, totalLiters, avgPrice, projectedTotal, monthName }
    */
   fetchDashboardStats: async () => {
-    if (!USE_REAL_API) return mockBackend.getStats();
-    
     try {
       const response = await fetch(`${API_BASE_URL}/dashboard/stats`);
       if (!response.ok) throw new Error('Falha ao buscar estatísticas');
@@ -43,8 +40,6 @@ const apiService = {
    * O Backend DEVE retornar: Array de logs [{ id, type, liters, total, date, ... }]
    */
   fetchLogs: async () => {
-    if (!USE_REAL_API) return mockBackend.getLogs();
-    
     try {
       const response = await fetch(`${API_BASE_URL}/fuel-logs`);
       if (!response.ok) throw new Error('Falha ao buscar logs');
@@ -60,8 +55,6 @@ const apiService = {
    * Rota: POST /fuel-logs
    */
   createLog: async (logData) => {
-    if (!USE_REAL_API) return mockBackend.post(logData);
-
     try {
       const response = await fetch(`${API_BASE_URL}/fuel-logs`, {
         method: 'POST',
@@ -81,8 +74,6 @@ const apiService = {
    * Rota: DELETE /fuel-logs/:id
    */
   deleteLog: async (id) => {
-    if (!USE_REAL_API) return mockBackend.delete(id);
-
     try {
       const response = await fetch(`${API_BASE_URL}/fuel-logs/${id}`, {
         method: 'DELETE'
@@ -93,42 +84,6 @@ const apiService = {
       console.error("API Delete Error:", error);
       throw error;
     }
-  }
-};
-
-// --- MOCK BACKEND (Simulação de Respostas Calculadas) ---
-let inMemoryDb = [
-  { id: '1', type: 'gasolina', liters: 42.5, pricePerLiter: 5.80, total: 246.50, date: new Date().toISOString().split('T')[0] },
-  { id: '2', type: 'etanol', liters: 30.0, pricePerLiter: 3.90, total: 117.00, date: '2024-05-10' }
-];
-
-const mockBackend = {
-  getStats: async () => {
-    return new Promise(resolve => setTimeout(() => {
-      resolve({
-        totalSpent: 363.50,
-        totalLiters: 72.5,
-        avgPrice: 5.01,
-        projectedTotal: 520.00,
-        monthName: 'Maio'
-      });
-    }, 500));
-  },
-  getLogs: async () => {
-    return new Promise(resolve => setTimeout(() => resolve([...inMemoryDb]), 500));
-  },
-  post: async (data) => {
-    return new Promise(resolve => setTimeout(() => {
-      const newLog = { ...data, id: Date.now().toString(), total: data.liters * data.pricePerLiter };
-      inMemoryDb = [newLog, ...inMemoryDb];
-      resolve(newLog);
-    }, 500));
-  },
-  delete: async (id) => {
-    return new Promise(resolve => setTimeout(() => {
-      inMemoryDb = inMemoryDb.filter(item => item.id !== id);
-      resolve(true);
-    }, 500));
   }
 };
 
