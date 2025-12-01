@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO DA API ---
-const API_BASE_URL = 'https://automacao-ww-app-bea.tidl9u.easypanel.host/'; 
+const API_BASE_URL = 'https://sinaurb-app-bea-backend.nu5jqr.easypanel.host/'; 
 const USE_REAL_API = true; // Mude para TRUE para usar o backend real
 
 // --- SERVIÇO DE API ---
