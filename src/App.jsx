@@ -15,7 +15,7 @@ import {
 
 // --- CONFIGURAÇÃO DA API ---
 const API_BASE_URL = 'https://sinaurb-app-bea-backend.nu5jqr.easypanel.host'; 
-const USE_REAL_API = true; // Mude para TRUE para usar o backend real
+const USE_REAL_API = false; // Mude para TRUE para usar o backend real
 
 // --- SERVIÇO DE API ---
 const apiService = {
@@ -97,7 +97,6 @@ const apiService = {
 };
 
 // --- MOCK BACKEND (Simulação de Respostas Calculadas) ---
-// Note que agora o Mock retorna os valores JÁ CALCULADOS, simulando o seu back-end.
 let inMemoryDb = [
   { id: '1', type: 'gasolina', liters: 42.5, pricePerLiter: 5.80, total: 246.50, date: new Date().toISOString().split('T')[0] },
   { id: '2', type: 'etanol', liters: 30.0, pricePerLiter: 3.90, total: 117.00, date: '2024-05-10' }
@@ -106,13 +105,12 @@ let inMemoryDb = [
 const mockBackend = {
   getStats: async () => {
     return new Promise(resolve => setTimeout(() => {
-      // O Backend real fará esses cálculos:
       resolve({
         totalSpent: 363.50,
         totalLiters: 72.5,
         avgPrice: 5.01,
-        projectedTotal: 520.00, // Exemplo de projeção calculada no back
-        monthName: 'Maio'       // Backend diz qual é o mês corrente
+        projectedTotal: 520.00,
+        monthName: 'Maio'
       });
     }, 500));
   },
@@ -175,7 +173,6 @@ const HistoryItem = ({ item, onDelete }) => (
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Estado separado para STATS e LOGS (vêm de endpoints diferentes)
   const [stats, setStats] = useState({
     totalSpent: 0,
     totalLiters: 0,
@@ -204,12 +201,10 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      // Faz as duas chamadas em paralelo
       const [statsData, logsData] = await Promise.all([
         apiService.fetchDashboardStats(),
         apiService.fetchLogs()
       ]);
-      
       setStats(statsData);
       setLogs(logsData || []);
     } catch (err) {
@@ -223,7 +218,7 @@ export default function App() {
     if(window.confirm('Deseja remover este registro?')) {
       try {
         await apiService.deleteLog(id);
-        loadData(); // Recarrega tudo (incluindo stats recalculados pelo back)
+        loadData(); 
       } catch (err) {
         alert("Erro ao deletar");
       }
@@ -239,7 +234,6 @@ export default function App() {
     e.preventDefault();
     setSubmitting(true);
     
-    // Payload simplificado: O Frontend manda apenas os dados brutos
     const payload = {
       type: formData.type,
       liters: parseFloat(formData.liters),
@@ -251,7 +245,7 @@ export default function App() {
       await apiService.createLog(payload);
       setFormData({ ...formData, liters: '' });
       setActiveTab('dashboard');
-      loadData(); // Backend deve recalcular stats e retornar nova lista
+      loadData(); 
     } catch (err) {
       alert("Erro ao salvar.");
     } finally {
@@ -259,12 +253,15 @@ export default function App() {
     }
   };
 
+  // Gerar Opções de Preço
   const priceOptions = [];
   for (let i = 5.00; i <= 6.01; i += 0.10) {
     priceOptions.push(i.toFixed(2));
   }
 
-  // Função para alternar abas
+  // Opções de Litros
+  const litersOptions = [10, 20, 30, 40, 50, 60];
+
   const toggleTab = () => {
     setActiveTab(activeTab === 'dashboard' ? 'add' : 'dashboard');
   };
@@ -286,7 +283,6 @@ export default function App() {
               <p className="font-bold capitalize">{stats.monthName}</p>
             </div>
             
-            {/* BOTÃO DE AÇÃO PRINCIPAL */}
             <button 
               onClick={toggleTab}
               className="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-4 py-2 rounded-full font-medium transition-colors flex items-center gap-2 border border-white/20"
@@ -317,7 +313,6 @@ export default function App() {
           <>
             {activeTab === 'dashboard' && (
               <div className="space-y-6 animate-fade-in">
-                {/* OS DADOS AGORA VÊM DIRETAMENTE DO ESTADO 'stats' POVOADO PELO BACKEND */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <StatCard 
                     title="Gasto Mensal" 
@@ -413,22 +408,59 @@ export default function App() {
                         />
                         <span className="absolute right-4 top-3 text-gray-400 font-medium">L</span>
                       </div>
+                      
+                      {/* Sugestões de Litros */}
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {litersOptions.map((amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, liters: amount.toString() }))}
+                            className={`px-3 py-1 text-xs rounded-full border transition-all ${
+                              formData.liters === amount.toString()
+                                ? 'bg-indigo-100 border-indigo-300 text-indigo-700 font-bold'
+                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            {amount}L
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Preço por Litro</label>
-                      <select
-                        name="pricePerLiter"
-                        value={formData.pricePerLiter}
-                        onChange={handleInputChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                      >
-                        {priceOptions.map(price => (
-                          <option key={price} value={price}>
-                            R$ {price.replace('.', ',')}
-                          </option>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-gray-500 font-medium">R$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          name="pricePerLiter"
+                          value={formData.pricePerLiter}
+                          onChange={handleInputChange}
+                          className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      
+                      {/* Sugestões de Preço */}
+                      <div className="flex gap-2 mt-2 flex-wrap max-h-32 overflow-y-auto">
+                        {priceOptions.map((price) => (
+                          <button
+                            key={price}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, pricePerLiter: price }))}
+                            className={`px-3 py-1 text-xs rounded-full border transition-all ${
+                              // Compara como número para evitar problemas com "5.8" vs "5.80"
+                              Math.abs(Number(formData.pricePerLiter) - Number(price)) < 0.001
+                                ? 'bg-indigo-100 border-indigo-300 text-indigo-700 font-bold'
+                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            {price}
+                          </button>
                         ))}
-                      </select>
+                      </div>
                     </div>
 
                     <div>
